@@ -16,8 +16,9 @@ datasource db {
 model Users {
   id          Int  @id @default(autoincrement())
   name        String
-  email       String  @unique
   username    String  @unique
+  email       String  @unique
+  registration String @unique @db.VarChar(6)
   password    String  @default("")
   profile_id   Int 
   profile     Profile @relation(fields: [profile_id], references: [id])
