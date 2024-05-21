@@ -1,0 +1,86 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Users {
+  id          Int  @id @default(autoincrement())
+  name        String
+  email       String  @unique
+  username    String  @unique
+  password    String  @default("")
+  profile_id   Int 
+  profile     Profile @relation(fields: [profile_id], references: [id])
+  created_at  DateTime @default(now())
+  updated_at  DateTime @default(now())
+  @@map("users")
+}
+
+model Profile {
+  id          Int  @id @default(autoincrement())
+  name        String  @unique
+  description String?
+  is_admin     Boolean @default(false)
+  users       Users[]
+  profile_modules profile_module[]
+  created_at  DateTime @default(now())
+  updated_at  DateTime @default(now())
+   @@map("profile")
+}
+
+model Module {
+  id              Int  @id @default(autoincrement())
+  name            String
+  description     String? @default("255")
+  text_color       String  @default("#000000")
+  background_color String  @default("#ffffff")
+  transactions    Transaction[]
+  functions       Function[]
+  profile_modules  profile_module[]
+  created_at  DateTime @default(now())
+  updated_at  DateTime @default(now())
+  @@map("module")
+}
+
+model Transaction {
+  id          Int  @id @default(autoincrement())
+  name        String  @unique
+  description String
+  module      Module  @relation(fields: [module_id], references: [id])
+  module_id    Int
+  created_at  DateTime @default(now())
+  updated_at  DateTime @default(now())
+  @@map("transaction")
+}
+
+model Function {
+  id          Int  @id @default(autoincrement())
+  name        String
+  description String?
+  module      Module  @relation(fields: [module_id], references: [id])
+  module_id   Int
+  created_at  DateTime @default(now())
+  updated_at  DateTime @default(now())
+  @@map("function")
+}
+
+model profile_module {
+  id        Int   @id @default(autoincrement())
+  profile   Profile  @relation(fields: [profileId], references: [id])
+  profileId Int
+  module    Module   @relation(fields: [module_id], references: [id])
+  module_id  Int
+  created_at  DateTime @default(now())
+  updated_at  DateTime @default(now())
+  @@map("profile_module")
+}
