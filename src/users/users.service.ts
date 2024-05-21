@@ -17,7 +17,16 @@ export class UsersService {
   ) {}
 
   async getAllUsers(): Promise<Users[] | null> {
-    return await this.prisma.users.findMany();
+    return await this.prisma.users.findMany({
+      include: {
+        profile: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
+    });
   }
 
   async findByUsername(username: string): Promise<Users | null> {
