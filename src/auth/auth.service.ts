@@ -7,12 +7,14 @@ import {
 import { UsersService } from '../users/users.service';
 import { JwtService } from '@nestjs/jwt';
 import { AuthRegisterDTO } from './dto/auth-register.dto';
+import { ProfilesService } from 'src/profiles/profiles.service';
 
 @Injectable()
 export class AuthService {
   constructor(
     private usersService: UsersService,
     private jwtService: JwtService,
+    private profileService: ProfilesService,
   ) {}
 
   async register(user: AuthRegisterDTO) {
@@ -21,6 +23,9 @@ export class AuthService {
       throw new ConflictException(
         'Já existe um usuário com o e-mail ou nome de usuário',
       );
+
+    const profileExists = await this.profileService.existsById(user.profile_id);
+    if (!profileExists) throw new NotFoundException('Perfil não encontrado!');
 
     return this.usersService.createUser(user);
   }
