@@ -8,9 +8,10 @@ import { AuthModule } from './auth/auth.module';
 import { UsersService } from './users/users.service';
 import { ProfilesModule } from './profiles/profiles.module';
 import { ProfilesService } from './profiles/profiles.service';
+import { ModulesModule } from './modules/modules.module';
 
 @Module({
-  imports: [UsersModule, AuthModule, ProfilesModule],
+  imports: [UsersModule, AuthModule, ProfilesModule, ModulesModule],
   controllers: [AppController],
   providers: [
     AppService,

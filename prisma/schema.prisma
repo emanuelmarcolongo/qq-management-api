@@ -34,6 +34,8 @@ model Profile {
   is_admin     Boolean @default(false)
   users       Users[]
   profile_modules profile_module[]
+  profile_transaction profile_transaction[]
+  profile_function profile_function[]
   created_at  DateTime @default(now())
   updated_at  DateTime @default(now())
    @@map("profile")
@@ -59,6 +61,8 @@ model Transaction {
   description String
   module      Module  @relation(fields: [module_id], references: [id])
   module_id    Int
+  profile_transactions profile_transaction[]
+  profile_function profile_function[]
   created_at  DateTime @default(now())
   updated_at  DateTime @default(now())
   @@map("transaction")
@@ -70,6 +74,7 @@ model Function {
   description String?
   module      Module  @relation(fields: [module_id], references: [id])
   module_id   Int
+  profile_functions profile_function[]
   created_at  DateTime @default(now())
   updated_at  DateTime @default(now())
   @@map("function")
@@ -84,4 +89,28 @@ model profile_module {
   created_at  DateTime @default(now())
   updated_at  DateTime @default(now())
   @@map("profile_module")
+}
+
+model profile_transaction {
+  id               Int                   @id @default(autoincrement())
+  profile          Profile               @relation(fields: [profileId], references: [id])
+  profileId        Int
+  transaction      Transaction           @relation(fields: [transaction_id], references: [id])
+  transaction_id   Int
+  created_at       DateTime              @default(now())
+  updated_at       DateTime              @default(now())
+  @@map("profile_transaction")
+}
+
+model profile_function {
+  id               Int                   @id @default(autoincrement())
+  profile          Profile               @relation(fields: [profileId], references: [id])
+  profileId        Int
+  function         Function              @relation(fields: [function_id], references: [id])
+  function_id      Int
+  transaction      Transaction           @relation(fields: [transaction_id], references: [id])
+  transaction_id   Int
+  created_at       DateTime              @default(now())
+  updated_at       DateTime              @default(now())
+  @@map("profile_function")
 }
