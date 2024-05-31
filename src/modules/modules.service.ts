@@ -60,4 +60,12 @@ export class ModulesService {
 
     return updatedModule;
   }
+
+  async deleteModule(id: number) {
+    const deletedModule = await this.prisma.module.delete({
+      where: { id },
+    });
+
+    return deletedModule;
+  }
 }

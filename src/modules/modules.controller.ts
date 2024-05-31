@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   ParseIntPipe,
@@ -39,5 +40,12 @@ export class ModulesController {
     const updatedModule = await this.moduleService.updateModule(id, body);
 
     return updatedModule;
+  }
+
+  @Delete(':id')
+  async deleteModule(@Param('id', ParseIntPipe) id: number) {
+    const deletedModule = await this.moduleService.deleteModule(id);
+
+    return deletedModule;
   }
 }
