@@ -1,4 +1,13 @@
-import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  ParseIntPipe,
+  Post,
+  Put,
+  UseGuards,
+} from '@nestjs/common';
 import { ModulesService } from './modules.service';
 import { AuthGuard } from 'src/auth/auth.guard';
 import { CreateModuleDTO } from './dto/create-module.dto';
@@ -20,5 +29,15 @@ export class ModulesController {
     const module = await this.moduleService.createModule(body);
 
     return module;
+  }
+
+  @Put(':id')
+  async updateModule(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() body: CreateModuleDTO,
+  ) {
+    const updatedModule = await this.moduleService.updateModule(id, body);
+
+    return updatedModule;
   }
 }

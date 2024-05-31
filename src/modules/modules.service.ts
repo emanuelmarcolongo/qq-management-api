@@ -1,4 +1,8 @@
-import { ConflictException, Injectable } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { Module } from '@prisma/client';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateModuleDTO } from './dto/create-module.dto';
@@ -28,5 +32,32 @@ export class ModulesService {
     });
 
     return newModule;
+  }
+
+  async updateModule(id: number, module: CreateModuleDTO) {
+    const moduleExists = await this.prisma.module.findFirst({ where: { id } });
+
+    if (!moduleExists) {
+      throw new NotFoundException(`Módulo com o id: ${id} não encontrado`);
+    }
+
+    const nameInUse = await this.prisma.module.findFirst({
+      where: {
+        name: module.name,
+      },
+    });
+
+    if (nameInUse.id !== id) {
+      throw new ConflictException(
+        `Já existe um diferente módulo com esse nome, tente outro nome`,
+      );
+    }
+
+    const updatedModule = await this.prisma.module.update({
+      where: { id },
+      data: module,
+    });
+
+    return updatedModule;
   }
 }
