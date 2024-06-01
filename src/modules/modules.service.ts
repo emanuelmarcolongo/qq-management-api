@@ -47,7 +47,7 @@ export class ModulesService {
       },
     });
 
-    if (nameInUse.id !== id) {
+    if (nameInUse && nameInUse.id !== id) {
       throw new ConflictException(
         `Já existe um diferente módulo com esse nome, tente outro nome`,
       );
@@ -62,6 +62,13 @@ export class ModulesService {
   }
 
   async deleteModule(id: number) {
+    const moduleExists = await this.prisma.module.findFirst({
+      where: { id },
+    });
+
+    if (!moduleExists) {
+      throw new NotFoundException(`Módulo com o ID dado não encontrado`);
+    }
     const deletedModule = await this.prisma.module.delete({
       where: { id },
     });
