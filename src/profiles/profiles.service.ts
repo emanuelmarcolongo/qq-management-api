@@ -44,4 +44,98 @@ export class ProfilesService {
 
     return newProfile;
   }
+
+  async updateProfile(id: number, profile: CreateProfileDTO) {
+    const profileExists = await this.prisma.profile.findUnique({
+      where: { id },
+    });
+
+    if (!profileExists) {
+      throw new NotFoundException(`Perfil com o ${id} não foi encontrado!`);
+    }
+
+    const conflictingProfile = await this.prisma.profile.findFirst({
+      where: {
+        OR: [{ name: profile.name }],
+        NOT: { id },
+      },
+    });
+
+    if (conflictingProfile && conflictingProfile.name === profile.name) {
+      throw new ConflictException(
+        `Essa nome já pertence a outro perfil cadastrado`,
+      );
+    }
+
+    const updatedProfile = await this.prisma.profile.update({
+      where: { id },
+      data: {
+        ...profile,
+        updated_at: new Date(),
+      },
+    });
+    return updatedProfile;
+  }
+
+  async deleteProfile(id: number) {
+    const profileExists = await this.prisma.profile.findFirst({
+      where: { id },
+    });
+
+    if (!profileExists) {
+      throw new NotFoundException(`Perfil com o ID:${id} dado não encontrado`);
+    }
+    const deletedProfile = await this.prisma.profile.delete({
+      where: { id },
+    });
+
+    return deletedProfile;
+  }
+
+  async getProfileInfoById(profileId: number) {
+    const profile = await this.prisma.profile.findUnique({
+      where: { id: profileId },
+      include: {
+        profile_modules: {
+          include: {
+            module: {
+              include: {
+                transactions: {
+                  include: {
+                    profile_transactions: true,
+                    profile_function: {
+                      include: {
+                        function: true,
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    return {
+      id: profile.id,
+      name: profile.name,
+      description: profile.description,
+      modules: profile.profile_modules.map((pm) => ({
+        id: pm.module.id,
+        name: pm.module.name,
+        description: pm.module.description,
+        transactions: pm.module.transactions.map((t) => ({
+          id: t.id,
+          name: t.name,
+          description: t.description,
+          functions: t.profile_function.map((pf) => ({
+            id: pf.function.id,
+            name: pf.function.name,
+            description: pf.function.description,
+          })),
+        })),
+      })),
+    };
+  }
 }
