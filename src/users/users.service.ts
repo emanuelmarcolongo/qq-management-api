@@ -82,4 +82,63 @@ export class UsersService {
       data: user,
     });
   }
+
+  async updateUser(id: number, user: CreateUserDTO) {
+    const userExists = await this.prisma.users.findUnique({
+      where: { id },
+    });
+
+    if (!userExists) {
+      throw new NotFoundException(`Usuário com o ${id} não encontrado!`);
+    }
+
+    const conflictingUser = await this.prisma.users.findFirst({
+      where: {
+        OR: [
+          { registration: user.registration },
+          { username: user.username },
+          { email: user.email },
+        ],
+        NOT: { id },
+      },
+    });
+
+    if (conflictingUser) {
+      if (conflictingUser.registration === user.registration) {
+        throw new ConflictException(`Essa matrícula pertence a outro usuário`);
+      }
+      if (conflictingUser.username === user.username) {
+        throw new ConflictException(
+          `Esse nome de usuário pertence a outro usuário`,
+        );
+      }
+      if (conflictingUser.email === user.email) {
+        throw new ConflictException(`Esse email pertence a outro usuário`);
+      }
+    }
+
+    const updatedUser = await this.prisma.users.update({
+      where: { id },
+      data: {
+        ...user,
+        updated_at: new Date(),
+      },
+    });
+    return updatedUser;
+  }
+
+  async deleteUser(id: number) {
+    const userExists = await this.prisma.users.findFirst({
+      where: { id },
+    });
+
+    if (!userExists) {
+      throw new NotFoundException(`Usuário com o ID:${id} dado não encontrado`);
+    }
+    const deletedUser = await this.prisma.users.delete({
+      where: { id },
+    });
+
+    return deletedUser;
+  }
 }

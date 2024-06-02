@@ -2,8 +2,12 @@ import {
   Body,
   ConflictException,
   Controller,
+  Delete,
   Get,
+  Param,
+  ParseIntPipe,
   Post,
+  Put,
   UseGuards,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
@@ -24,5 +28,22 @@ export class UsersController {
   @Post('register')
   async register(@Body() body: CreateUserDTO) {
     return this.usersService.register(body);
+  }
+
+  @Put(':id')
+  async updateModule(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() body: CreateUserDTO,
+  ) {
+    const updatedUser = await this.usersService.updateUser(id, body);
+
+    return updatedUser;
+  }
+
+  @Delete(':id')
+  async deleteUser(@Param('id', ParseIntPipe) id: number) {
+    const deletedUser = await this.usersService.deleteUser(id);
+
+    return deletedUser;
   }
 }
