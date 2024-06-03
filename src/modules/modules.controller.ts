@@ -25,6 +25,13 @@ export class ModulesController {
     return modules;
   }
 
+  @Get(':id')
+  async getModuleById(@Param('id', ParseIntPipe) id: number) {
+    const detailedModule = await this.moduleService.getModuleById(id);
+
+    return detailedModule;
+  }
+
   @Post()
   async createModule(@Body() body: CreateModuleDTO) {
     const module = await this.moduleService.createModule(body);

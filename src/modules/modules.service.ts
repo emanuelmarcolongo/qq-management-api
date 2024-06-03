@@ -17,6 +17,30 @@ export class ModulesService {
     return modules;
   }
 
+  async getModuleById(moduleId: number) {
+    return this.prisma.module.findUnique({
+      where: { id: moduleId },
+      include: {
+        transactions: {
+          select: {
+            id: true,
+            name: true,
+            description: true,
+            created_at: true,
+          },
+        },
+        functions: {
+          select: {
+            id: true,
+            name: true,
+            description: true,
+            created_at: true,
+          },
+        },
+      },
+    });
+  }
+
   async createModule(module: CreateModuleDTO) {
     const nameInUse = await this.prisma.module.findFirst({
       where: { name: module.name },

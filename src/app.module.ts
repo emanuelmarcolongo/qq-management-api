@@ -9,9 +9,19 @@ import { UsersService } from './users/users.service';
 import { ProfilesModule } from './profiles/profiles.module';
 import { ProfilesService } from './profiles/profiles.service';
 import { ModulesModule } from './modules/modules.module';
+import { TransactionsModule } from './transactions/transactions.module';
+import { FunctionsController } from './functions/functions.controller';
+import { FunctionsModule } from './functions/functions.module';
 
 @Module({
-  imports: [UsersModule, AuthModule, ProfilesModule, ModulesModule],
+  imports: [
+    UsersModule,
+    AuthModule,
+    ProfilesModule,
+    ModulesModule,
+    TransactionsModule,
+    FunctionsModule,
+  ],
   controllers: [AppController],
   providers: [
     AppService,
