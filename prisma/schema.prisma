@@ -44,7 +44,7 @@ model Profile {
 model Module {
   id              Int  @id @default(autoincrement())
   name            String
-  description     String? @default("255")
+  description     String? @default("Sem descrição")
   text_color       String  @default("#000000")
   background_color String  @default("#ffffff")
   transactions    Transaction[]
@@ -58,7 +58,7 @@ model Module {
 model Transaction {
   id          Int  @id @default(autoincrement())
   name        String  @unique
-  description String
+  description String? @default("Sem descrição")
   module      Module  @relation(fields: [module_id], references: [id])
   module_id    Int
   profile_transactions profile_transaction[]
@@ -71,7 +71,7 @@ model Transaction {
 model Function {
   id          Int  @id @default(autoincrement())
   name        String
-  description String?
+  description String? @default("Sem descrição")
   module      Module  @relation(fields: [module_id], references: [id])
   module_id   Int
   profile_functions profile_function[]

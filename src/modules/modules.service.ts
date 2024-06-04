@@ -79,7 +79,7 @@ export class ModulesService {
 
     const updatedModule = await this.prisma.module.update({
       where: { id },
-      data: module,
+      data: { ...module, updated_at: new Date() },
     });
 
     return updatedModule;
@@ -93,10 +93,31 @@ export class ModulesService {
     if (!moduleExists) {
       throw new NotFoundException(`Módulo com o ID dado não encontrado`);
     }
-    const deletedModule = await this.prisma.module.delete({
-      where: { id },
-    });
+    return this.prisma.$transaction(async (prisma) => {
+      await prisma.profile_function.deleteMany({
+        where: { function: { module_id: id } },
+      });
 
-    return deletedModule;
+      await prisma.profile_transaction.deleteMany({
+        where: { transaction: { module_id: id } },
+      });
+
+      await prisma.profile_module.deleteMany({
+        where: {
+          module_id: id,
+        },
+      });
+
+      await prisma.transaction.deleteMany({
+        where: { module_id: id },
+      });
+      await prisma.function.deleteMany({
+        where: { module_id: id },
+      });
+
+      return prisma.module.delete({
+        where: { id: id },
+      });
+    });
   }
 }
