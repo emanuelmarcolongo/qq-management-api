@@ -5,7 +5,10 @@ import {
 } from '@nestjs/common';
 import { Profile } from '@prisma/client';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { CreateProfileDTO } from './dto/create-profile.dto';
+import {
+  CreateProfileDTO,
+  CreateProfileModuleDTO,
+} from './dto/create-profile.dto';
 
 @Injectable()
 export class ProfilesService {
@@ -117,6 +120,12 @@ export class ProfilesService {
       },
     });
 
+    if (!profile) {
+      throw new NotFoundException(
+        `Perfil com o ID:${profileId} dado não encontrado`,
+      );
+    }
+
     return {
       id: profile.id,
       name: profile.name,
@@ -137,5 +146,68 @@ export class ProfilesService {
         })),
       })),
     };
+  }
+
+  async getAvailableModules(profileId: number) {
+    const profileExists = await this.prisma.profile.findUnique({
+      where: { id: profileId },
+    });
+
+    if (!profileExists) {
+      throw new NotFoundException(`Perfil com o Id fornecido não encontrado!`);
+    }
+
+    const profileAvailableModules = await this.prisma.module.findMany({
+      where: {
+        id: {
+          notIn: (
+            await this.prisma.profile_module.findMany({
+              where: { profile_id: profileId },
+              select: { module_id: true },
+            })
+          ).map((pm) => pm.module_id),
+        },
+      },
+    });
+
+    return profileAvailableModules;
+  }
+
+  async postProfileModule(profileId: number, body: CreateProfileModuleDTO) {
+    const { moduleIds } = body;
+    const profileExists = await this.prisma.profile.findUnique({
+      where: {
+        id: profileId,
+      },
+    });
+
+    if (!profileExists) {
+      throw new NotFoundException(`Perfil com o Id fornecido não encontrado!`);
+    }
+
+    const modulesExist = await this.prisma.module.findMany({
+      where: {
+        id: { in: moduleIds },
+      },
+    });
+
+    if (modulesExist.length !== moduleIds.length) {
+      throw new NotFoundException(
+        `Um ou mais módulos com os Ids fornecidos não foram encontrados!`,
+      );
+    }
+
+    const result = await this.prisma.$transaction(
+      moduleIds.map((moduleId) =>
+        this.prisma.profile_module.create({
+          data: {
+            profile_id: profileId,
+            module_id: moduleId,
+          },
+        }),
+      ),
+    );
+
+    return result;
   }
 }

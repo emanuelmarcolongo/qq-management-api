@@ -11,7 +11,10 @@ import {
 } from '@nestjs/common';
 import { ProfilesService } from './profiles.service';
 import { AuthGuard } from 'src/auth/auth.guard';
-import { CreateProfileDTO } from './dto/create-profile.dto';
+import {
+  CreateProfileDTO,
+  CreateProfileModuleDTO,
+} from './dto/create-profile.dto';
 
 @Controller('profiles')
 @UseGuards(AuthGuard)
@@ -54,5 +57,22 @@ export class ProfilesController {
     const profileWithInfo = await this.profileService.getProfileInfoById(id);
 
     return profileWithInfo;
+  }
+
+  @Get(':id/modules')
+  async getProfileAvailableModules(@Param('id', ParseIntPipe) id: number) {
+    const availableModules = await this.profileService.getAvailableModules(id);
+
+    return availableModules;
+  }
+
+  @Post(':id/modules')
+  async createProfileModule(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() body: CreateProfileModuleDTO,
+  ) {
+    const profileModule = await this.profileService.postProfileModule(id, body);
+
+    return profileModule;
   }
 }
