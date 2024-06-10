@@ -89,6 +89,8 @@ model profile_module {
   created_at  DateTime @default(now())
   updated_at  DateTime @default(now())
   @@map("profile_module")
+
+  @@unique([profile_id, module_id])
 }
 
 model profile_transaction {

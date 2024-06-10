@@ -14,6 +14,7 @@ import { AuthGuard } from 'src/auth/auth.guard';
 import {
   CreateProfileDTO,
   CreateProfileModuleDTO,
+  DeleteProfileModuleDTO,
 } from './dto/create-profile.dto';
 
 @Controller('profiles')
@@ -36,7 +37,7 @@ export class ProfilesController {
   }
 
   @Put(':id')
-  async updateModule(
+  async updateProfile(
     @Param('id', ParseIntPipe) id: number,
     @Body() body: CreateProfileDTO,
   ) {
@@ -46,7 +47,7 @@ export class ProfilesController {
   }
 
   @Delete(':id')
-  async deleteUser(@Param('id', ParseIntPipe) id: number) {
+  async deleteProfile(@Param('id', ParseIntPipe) id: number) {
     const deletedProfile = await this.profileService.deleteProfile(id);
 
     return deletedProfile;
@@ -74,5 +75,18 @@ export class ProfilesController {
     const profileModule = await this.profileService.postProfileModule(id, body);
 
     return profileModule;
+  }
+
+  @Delete(':profile_id/modules/:module_id')
+  async deleteProfileModule(
+    @Param('profile_id', ParseIntPipe) profile_id: number,
+    @Param('module_id', ParseIntPipe) module_id: number,
+  ) {
+    const deletedProfileModule = await this.profileService.deleteProfileModule(
+      profile_id,
+      module_id,
+    );
+
+    return { message: 'Relação e dependências deletadas com sucesso' };
   }
 }

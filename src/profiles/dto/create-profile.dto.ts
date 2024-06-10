@@ -23,3 +23,8 @@ export class CreateProfileModuleDTO {
   @Min(1, { each: true })
   moduleIds: number[];
 }
+
+export class DeleteProfileModuleDTO {
+  @IsInt()
+  moduleId: number;
+}

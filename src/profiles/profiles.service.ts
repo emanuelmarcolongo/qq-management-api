@@ -199,8 +199,15 @@ export class ProfilesService {
 
     const result = await this.prisma.$transaction(
       moduleIds.map((moduleId) =>
-        this.prisma.profile_module.create({
-          data: {
+        this.prisma.profile_module.upsert({
+          where: {
+            profile_id_module_id: {
+              profile_id: profileId,
+              module_id: moduleId,
+            },
+          },
+          update: {},
+          create: {
             profile_id: profileId,
             module_id: moduleId,
           },
@@ -209,5 +216,46 @@ export class ProfilesService {
     );
 
     return result;
+  }
+
+  async deleteProfileModule(profile_id: number, module_id: number) {
+    const profileModuleExists = await this.prisma.profile_module.findFirst({
+      where: {
+        profile_id,
+        module_id,
+      },
+    });
+
+    if (!profileModuleExists) {
+      throw new NotFoundException(
+        'Relação entre perfil e módulo não encontrada!',
+      );
+    }
+
+    await this.prisma.$transaction(async (prisma) => {
+      await prisma.profile_function.deleteMany({
+        where: {
+          profile_id,
+          function: {
+            module_id,
+          },
+        },
+      });
+
+      await prisma.profile_transaction.deleteMany({
+        where: {
+          profile_id,
+          transaction: {
+            module_id,
+          },
+        },
+      });
+
+      await prisma.profile_module.delete({
+        where: {
+          id: profileModuleExists.id,
+        },
+      });
+    });
   }
 }
