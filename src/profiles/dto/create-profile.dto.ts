@@ -24,6 +24,14 @@ export class CreateProfileModuleDTO {
   moduleIds: number[];
 }
 
+export class CreateProfileTransactionDTO {
+  @IsArray()
+  @ArrayMinSize(1)
+  @IsInt({ each: true })
+  @Min(1, { each: true })
+  transactionIds: number[];
+}
+
 export class DeleteProfileModuleDTO {
   @IsInt()
   moduleId: number;

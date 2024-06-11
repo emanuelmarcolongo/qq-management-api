@@ -2,12 +2,14 @@ import {
   ConflictException,
   Injectable,
   NotFoundException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { Profile } from '@prisma/client';
 import { PrismaService } from 'src/prisma/prisma.service';
 import {
   CreateProfileDTO,
   CreateProfileModuleDTO,
+  CreateProfileTransactionDTO,
 } from './dto/create-profile.dto';
 
 @Injectable()
@@ -104,6 +106,13 @@ export class ProfilesService {
             module: {
               include: {
                 transactions: {
+                  where: {
+                    profile_transactions: {
+                      some: {
+                        profile_id: profileId,
+                      },
+                    },
+                  },
                   include: {
                     profile_transactions: true,
                     profile_function: {
@@ -126,7 +135,7 @@ export class ProfilesService {
       );
     }
 
-    return {
+    const mappedProfile = {
       id: profile.id,
       name: profile.name,
       description: profile.description,
@@ -146,6 +155,48 @@ export class ProfilesService {
         })),
       })),
     };
+
+    return mappedProfile;
+  }
+
+  async getAvailableTransactions(profile_id: number, module_id: number) {
+    const profileExists = await this.prisma.profile.findUnique({
+      where: { id: profile_id },
+    });
+
+    if (!profileExists) {
+      throw new NotFoundException(`Perfil com o Id fornecido não encontrado!`);
+    }
+
+    const moduleRelation = await this.prisma.profile_module.findFirst({
+      where: {
+        module_id,
+        profile_id,
+      },
+    });
+
+    if (!moduleRelation) {
+      throw new UnauthorizedException(
+        'Módulo não vinculado ao perfil, vincule antes de vincular uma transação',
+      );
+    }
+
+    const profileAvailableTransactions = await this.prisma.transaction.findMany(
+      {
+        where: {
+          id: {
+            notIn: (
+              await this.prisma.profile_transaction.findMany({
+                where: { profile_id: profile_id },
+                select: { transaction_id: true },
+              })
+            ).map((pm) => pm.transaction_id),
+          },
+        },
+      },
+    );
+
+    return profileAvailableTransactions;
   }
 
   async getAvailableModules(profileId: number) {
@@ -254,6 +305,86 @@ export class ProfilesService {
       await prisma.profile_module.delete({
         where: {
           id: profileModuleExists.id,
+        },
+      });
+    });
+  }
+
+  async postProfileTransaction(
+    profileId: number,
+    body: CreateProfileTransactionDTO,
+  ) {
+    const { transactionIds } = body;
+    const profileExists = await this.prisma.profile.findUnique({
+      where: {
+        id: profileId,
+      },
+    });
+
+    if (!profileExists) {
+      throw new NotFoundException(`Perfil com o Id fornecido não encontrado!`);
+    }
+
+    const transactionsExists = await this.prisma.transaction.findMany({
+      where: {
+        id: { in: transactionIds },
+      },
+    });
+
+    if (transactionsExists.length !== transactionIds.length) {
+      throw new NotFoundException(
+        `Um ou mais módulos com os Ids fornecidos não foram encontrados!`,
+      );
+    }
+
+    const result = await this.prisma.$transaction(
+      transactionIds.map((transaction_id) =>
+        this.prisma.profile_transaction.upsert({
+          where: {
+            profile_id_transaction_id: {
+              profile_id: profileId,
+              transaction_id,
+            },
+          },
+          update: {},
+          create: {
+            profile_id: profileId,
+            transaction_id,
+          },
+        }),
+      ),
+    );
+
+    return result;
+  }
+
+  async deleteProfileTransaction(profile_id: number, transaction_id: number) {
+    const profileTransactionExists =
+      await this.prisma.profile_transaction.findFirst({
+        where: {
+          profile_id,
+          transaction_id,
+        },
+      });
+
+    if (!profileTransactionExists) {
+      throw new NotFoundException(
+        'Relação entre perfil e transação não encontrada!',
+      );
+    }
+
+    await this.prisma.$transaction(async (prisma) => {
+      await prisma.profile_function.deleteMany({
+        where: {
+          profile_id,
+          transaction_id,
+        },
+      });
+
+      await prisma.profile_transaction.deleteMany({
+        where: {
+          profile_id,
+          transaction_id,
         },
       });
     });

@@ -102,6 +102,8 @@ model profile_transaction {
   created_at       DateTime              @default(now())
   updated_at       DateTime              @default(now())
   @@map("profile_transaction")
+
+  @@unique([profile_id, transaction_id])
 }
 
 model profile_function {
@@ -115,4 +117,6 @@ model profile_function {
   created_at       DateTime              @default(now())
   updated_at       DateTime              @default(now())
   @@map("profile_function")
+
+   @@unique([profile_id, transaction_id, function_id])
 }

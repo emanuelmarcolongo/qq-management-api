@@ -14,6 +14,7 @@ import { AuthGuard } from 'src/auth/auth.guard';
 import {
   CreateProfileDTO,
   CreateProfileModuleDTO,
+  CreateProfileTransactionDTO,
   DeleteProfileModuleDTO,
 } from './dto/create-profile.dto';
 
@@ -67,6 +68,17 @@ export class ProfilesController {
     return availableModules;
   }
 
+  @Get(':id/modules/:module_id/transactions')
+  async getProfileAvailableTransactions(
+    @Param('id', ParseIntPipe) id: number,
+    @Param('module_id', ParseIntPipe) module_id: number,
+  ) {
+    const availableTransactions =
+      await this.profileService.getAvailableTransactions(id, module_id);
+
+    return availableTransactions;
+  }
+
   @Post(':id/modules')
   async createProfileModule(
     @Param('id', ParseIntPipe) id: number,
@@ -75,6 +87,19 @@ export class ProfilesController {
     const profileModule = await this.profileService.postProfileModule(id, body);
 
     return profileModule;
+  }
+
+  @Post(':id/transaction')
+  async createProfileTransaction(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() body: CreateProfileTransactionDTO,
+  ) {
+    const profileTransaction = await this.profileService.postProfileTransaction(
+      id,
+      body,
+    );
+
+    return profileTransaction;
   }
 
   @Delete(':profile_id/modules/:module_id')
@@ -86,6 +111,20 @@ export class ProfilesController {
       profile_id,
       module_id,
     );
+
+    return { message: 'Relação e dependências deletadas com sucesso' };
+  }
+
+  @Delete(':profile_id/transactions/:transaction_id')
+  async deleteProfileTransaction(
+    @Param('profile_id', ParseIntPipe) profile_id: number,
+    @Param('transaction_id', ParseIntPipe) transaction_id: number,
+  ) {
+    const deletedProfileModule =
+      await this.profileService.deleteProfileTransaction(
+        profile_id,
+        transaction_id,
+      );
 
     return { message: 'Relação e dependências deletadas com sucesso' };
   }
