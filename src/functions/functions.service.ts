@@ -88,6 +88,16 @@ export class FunctionsService {
       where: { id: profile_id },
     });
 
+    const transactionExist = await this.prisma.transaction.findUnique({
+      where: { id: transaction_id },
+    });
+
+    if (!transactionExist) {
+      throw new NotFoundException(
+        `Transação com o Id fornecido não encontrada!`,
+      );
+    }
+
     if (!profileExists) {
       throw new NotFoundException(`Perfil com o Id fornecido não encontrado!`);
     }
@@ -117,6 +127,7 @@ export class FunctionsService {
             })
           ).map((pm) => pm.function_id),
         },
+        module_id: transactionExist.module_id,
       },
     });
 

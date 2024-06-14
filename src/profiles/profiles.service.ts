@@ -220,11 +220,12 @@ export class ProfilesService {
           id: {
             notIn: (
               await this.prisma.profile_transaction.findMany({
-                where: { profile_id: profile_id },
+                where: { profile_id },
                 select: { transaction_id: true },
               })
             ).map((pm) => pm.transaction_id),
           },
+          module_id: module_id,
         },
       },
     );
