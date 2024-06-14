@@ -27,6 +27,13 @@ export class FunctionsController {
     return func;
   }
 
+  @Get()
+  async getAllFunctions() {
+    const functions = await this.functionService.getAllFunctions();
+
+    return functions;
+  }
+
   @Put(':id')
   async updateFunction(
     @Param('id', ParseIntPipe) id: number,

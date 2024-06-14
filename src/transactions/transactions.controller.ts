@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Delete,
+  Get,
   Param,
   ParseIntPipe,
   Post,
@@ -21,6 +22,13 @@ export class TransactionsController {
     const transaction = await this.transactionService.createTransaction(body);
 
     return transaction;
+  }
+
+  @Get()
+  async getTransactions() {
+    const transactions = await this.transactionService.getAllTransactions();
+
+    return transactions;
   }
 
   @Put(':id')

@@ -15,6 +15,16 @@ import { NotFoundError } from 'rxjs';
 export class FunctionsService {
   constructor(private prisma: PrismaService) {}
 
+  async getAllFunctions() {
+    const functions = await this.prisma.function.findMany({
+      include: {
+        module: true,
+      },
+    });
+
+    return functions;
+  }
+
   async createFunction(func: CreateFunctionDTO) {
     const nameInUse = await this.prisma.function.findFirst({
       where: { name: func.name, module_id: func.module_id },

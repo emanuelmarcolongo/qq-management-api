@@ -10,6 +10,16 @@ import { CreateTransactionDTO } from './dto/create-transaction.dto';
 export class TransactionsService {
   constructor(private prisma: PrismaService) {}
 
+  async getAllTransactions() {
+    const transactions = await this.prisma.transaction.findMany({
+      include: {
+        module: true,
+      },
+    });
+
+    return transactions;
+  }
+
   async createTransaction(transaction: CreateTransactionDTO) {
     const nameInUse = await this.prisma.transaction.findFirst({
       where: { name: transaction.name, module_id: transaction.module_id },
