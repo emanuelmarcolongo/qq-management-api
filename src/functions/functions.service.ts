@@ -9,7 +9,6 @@ import {
   CreateFunctionDTO,
   CreateProfileFunctionDTO,
 } from './dto/create-function.dto';
-import { NotFoundError } from 'rxjs';
 
 @Injectable()
 export class FunctionsService {
@@ -71,12 +70,14 @@ export class FunctionsService {
       throw new NotFoundException(`Função com o id: ${id} não encontrada`);
     }
 
-    await this.prisma.profile_function.deleteMany({
-      where: { function_id: id },
-    });
+    const deletedFunction = await this.prisma.$transaction(async (prisma) => {
+      await prisma.profile_function.deleteMany({
+        where: { function_id: id },
+      });
 
-    const deletedFunction = await this.prisma.function.delete({
-      where: { id },
+      return await prisma.function.delete({
+        where: { id },
+      });
     });
 
     return deletedFunction;

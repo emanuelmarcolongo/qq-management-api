@@ -90,8 +90,41 @@ export class ProfilesService {
     if (!profileExists) {
       throw new NotFoundException(`Perfil com o ID:${id} dado não encontrado`);
     }
-    const deletedProfile = await this.prisma.profile.delete({
-      where: { id },
+
+    const userWithProfile = await this.prisma.users.findFirst({
+      where: {
+        profile_id: id,
+      },
+    });
+
+    if (userWithProfile) {
+      throw new ConflictException(
+        `Para deletar um perfil, certifique-se que não há usuários com o mesmo!`,
+      );
+    }
+
+    const deletedProfile = await this.prisma.$transaction(async (prisma) => {
+      await prisma.profile_function.deleteMany({
+        where: {
+          profile_id: id,
+        },
+      });
+
+      await prisma.profile_transaction.deleteMany({
+        where: {
+          profile_id: id,
+        },
+      });
+
+      await prisma.profile_module.deleteMany({
+        where: {
+          profile_id: id,
+        },
+      });
+
+      return await prisma.profile.delete({
+        where: { id },
+      });
     });
 
     return deletedProfile;

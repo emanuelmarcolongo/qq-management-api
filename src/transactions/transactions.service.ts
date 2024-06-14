@@ -66,21 +66,25 @@ export class TransactionsService {
       throw new NotFoundException(`Transação com o id: ${id} não encontrada"`);
     }
 
-    await this.prisma.profile_function.deleteMany({
-      where: {
-        transaction_id: id,
-      },
-    });
+    const deletedTransaction = await this.prisma.$transaction(
+      async (prisma) => {
+        await prisma.profile_function.deleteMany({
+          where: {
+            transaction_id: id,
+          },
+        });
 
-    await this.prisma.profile_transaction.deleteMany({
-      where: {
-        transaction_id: id,
-      },
-    });
+        await prisma.profile_transaction.deleteMany({
+          where: {
+            transaction_id: id,
+          },
+        });
 
-    const deletedTransaction = await this.prisma.transaction.delete({
-      where: { id },
-    });
+        return await prisma.transaction.delete({
+          where: { id },
+        });
+      },
+    );
 
     return deletedTransaction;
   }
