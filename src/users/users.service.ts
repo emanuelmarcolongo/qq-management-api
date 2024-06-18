@@ -5,9 +5,10 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { Users } from '@prisma/client';
+import { UserWithProfile } from 'src/models/UserModels';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { CreateUserDTO } from './dto/create-user.dto';
 import { ProfilesService } from 'src/profiles/profiles.service';
+import { CreateUserDTO } from './dto/create-user.dto';
 
 @Injectable()
 export class UsersService {
@@ -33,6 +34,17 @@ export class UsersService {
     return await this.prisma.users.findUnique({
       where: {
         username,
+      },
+    });
+  }
+
+  async getUserWithProfile(username: string): Promise<UserWithProfile | null> {
+    return await this.prisma.users.findUnique({
+      where: {
+        username,
+      },
+      include: {
+        profile: true,
       },
     });
   }
@@ -74,12 +86,8 @@ export class UsersService {
     const profileExists = await this.profileService.existsById(user.profile_id);
     if (!profileExists) throw new NotFoundException('Perfil não encontrado!');
 
-    return this.prisma.users.create({ data: user });
-  }
-
-  async createUser(user: CreateUserDTO) {
     return await this.prisma.users.create({
-      data: user,
+      data: { ...user, password: user.registration },
     });
   }
 
