@@ -14,4 +14,13 @@ interface UserSignInInfo {
   registration: string;
 }
 
-export { UserSignInInfo, UserWithProfile };
+interface PayloadUserInfo {
+  sub: number;
+  username: string;
+  profile: string;
+  is_admin: boolean;
+  iat: number;
+  exp: number;
+}
+
+export { PayloadUserInfo, UserSignInInfo, UserWithProfile };

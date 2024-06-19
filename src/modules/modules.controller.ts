@@ -9,9 +9,11 @@ import {
   Put,
   UseGuards,
 } from '@nestjs/common';
-import { ModulesService } from './modules.service';
 import { AuthGuard } from 'src/auth/auth.guard';
+import { User } from 'src/decorators/RequestUserDecorator';
+import { PayloadUserInfo } from 'src/models/UserModels';
 import { CreateModuleDTO } from './dto/create-module.dto';
+import { ModulesService } from './modules.service';
 
 @Controller('modules')
 @UseGuards(AuthGuard)
@@ -25,9 +27,25 @@ export class ModulesController {
     return modules;
   }
 
+  @Get('user')
+  async getUserModules(@User() user: PayloadUserInfo) {
+    const userModules = await this.moduleService.getUserModules(user);
+    return userModules;
+  }
+
   @Get(':id')
   async getModuleById(@Param('id', ParseIntPipe) id: number) {
     const detailedModule = await this.moduleService.getModuleById(id);
+
+    return detailedModule;
+  }
+
+  @Get(':id/user')
+  async getUserModuleById(
+    @User() user: PayloadUserInfo,
+    @Param('id', ParseIntPipe) id: number,
+  ) {
+    const detailedModule = await this.moduleService.getUserModuleById(id, user);
 
     return detailedModule;
   }

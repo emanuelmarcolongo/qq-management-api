@@ -4,6 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { Module } from '@prisma/client';
+import { PayloadUserInfo } from 'src/models/UserModels';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateModuleDTO } from './dto/create-module.dto';
 
@@ -119,5 +120,120 @@ export class ModulesService {
         where: { id: id },
       });
     });
+  }
+
+  async getUserModules(user: PayloadUserInfo) {
+    const userExists = await this.prisma.users.findUnique({
+      where: {
+        id: user.sub,
+      },
+    });
+    if (!userExists) {
+      throw new NotFoundException('Usuário não encontrado!');
+    }
+
+    const { profile_id } = userExists;
+
+    const profile = await this.prisma.profile.findUnique({
+      where: { id: profile_id },
+      include: {
+        profile_modules: {
+          include: {
+            module: true,
+          },
+        },
+      },
+    });
+
+    if (!profile) {
+      throw new Error('Perfil não encontrado');
+    }
+
+    return profile.profile_modules.map((pm) => ({
+      id: pm.module.id,
+      name: pm.module.name,
+      description: pm.module.description,
+      text_color: pm.module.text_color,
+      background_color: pm.module.background_color,
+      created_at: pm.module.updated_at,
+      updated_at: pm.module.created_at,
+    }));
+  }
+
+  async getUserModuleById(module_id: number, user: PayloadUserInfo) {
+    const userExists = await this.prisma.users.findUnique({
+      where: {
+        id: user.sub,
+      },
+    });
+
+    if (!userExists) {
+      throw new NotFoundException('Usuário não encontrado!');
+    }
+
+    const { profile_id } = userExists;
+
+    const module = await this.prisma.module.findFirst({
+      where: {
+        id: module_id,
+        profile_modules: {
+          some: {
+            profile_id,
+          },
+        },
+      },
+      include: {
+        transactions: {
+          include: {
+            profile_transactions: {
+              where: {
+                profile_id,
+              },
+              include: {
+                transaction: {
+                  include: {
+                    profile_function: {
+                      where: {
+                        profile_id,
+                      },
+                      include: {
+                        function: true,
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!module) {
+      throw new NotFoundException('Módulo não encontrado para este perfil');
+    }
+
+    return {
+      id: module.id,
+      name: module.name,
+      description: module.description,
+      transactions: module.transactions
+        .filter((t) =>
+          t.profile_transactions.some((pt) => pt.profile_id === profile_id),
+        )
+        .map((t) => ({
+          id: t.id,
+          name: t.name,
+          description: t.description,
+          functions: t.profile_transactions
+            .flatMap((pt) => pt.transaction.profile_function)
+            .filter((pf) => pf.profile_id === profile_id)
+            .map((pf) => ({
+              id: pf.function.id,
+              name: pf.function.name,
+              description: pf.function.description,
+            })),
+        })),
+    };
   }
 }
