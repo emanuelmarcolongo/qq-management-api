@@ -125,7 +125,7 @@ export class FunctionsService {
               where: { profile_id, transaction_id },
               select: { function_id: true },
             })
-          ).map((pm) => pm.function_id),
+          ).map((func) => func.function_id),
         },
         module_id: transactionExist.module_id,
       },
@@ -185,7 +185,7 @@ export class FunctionsService {
       },
     });
 
-    if (functionsExists.length !== functionsExists.length) {
+    if (functionsExists.length !== functionIds.length) {
       throw new NotFoundException(
         `Um ou mais funções com os Ids fornecidos não foram encontradas!`,
       );

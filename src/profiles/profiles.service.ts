@@ -24,11 +24,7 @@ export class ProfilesService {
   }
 
   async getProfiles(): Promise<Profile[]> {
-    const profiles = await this.prisma.profile.findMany({
-      where: {
-        is_admin: false,
-      },
-    });
+    const profiles = await this.prisma.profile.findMany();
 
     return profiles;
   }
