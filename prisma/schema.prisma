@@ -120,3 +120,10 @@ model profile_function {
 
    @@unique([profile_id, transaction_id, function_id])
 }
+
+model password_reset {
+   id               Int                   @id @default(autoincrement()) 
+   email            String          @unique
+   token            String          @unique
+   expiration_date  DateTime
+}
