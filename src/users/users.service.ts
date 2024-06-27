@@ -9,12 +9,14 @@ import { UserWithProfile } from 'src/models/UserModels';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { ProfilesService } from 'src/profiles/profiles.service';
 import { CreateUserDTO } from './dto/create-user.dto';
+import { BcryptService } from 'src/auth/bcrypt.service';
 
 @Injectable()
 export class UsersService {
   constructor(
     private prisma: PrismaService,
     private profileService: ProfilesService,
+    private bcrytService: BcryptService,
   ) {}
 
   async getAllUsers(): Promise<Users[] | null> {
@@ -86,8 +88,12 @@ export class UsersService {
     const profileExists = await this.profileService.existsById(user.profile_id);
     if (!profileExists) throw new NotFoundException('Perfil não encontrado!');
 
+    const hashPassword = await this.bcrytService.hashPassword(
+      user.registration,
+    );
+
     return await this.prisma.users.create({
-      data: { ...user, password: user.registration },
+      data: { ...user, password: hashPassword },
     });
   }
 

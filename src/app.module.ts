@@ -12,6 +12,7 @@ import { ModulesModule } from './modules/modules.module';
 import { TransactionsModule } from './transactions/transactions.module';
 import { FunctionsController } from './functions/functions.controller';
 import { FunctionsModule } from './functions/functions.module';
+import { BcryptService } from './auth/bcrypt.service';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { FunctionsModule } from './functions/functions.module';
     AuthService,
     UsersService,
     ProfilesService,
+    BcryptService,
   ],
 })
 export class AppModule {}

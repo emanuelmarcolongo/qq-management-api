@@ -7,6 +7,7 @@ import { UsersService } from 'src/users/users.service';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { jwtConstants } from './constants';
 import { ProfilesService } from 'src/profiles/profiles.service';
+import { BcryptService } from './bcrypt.service';
 
 @Module({
   imports: [
@@ -17,7 +18,13 @@ import { ProfilesService } from 'src/profiles/profiles.service';
       signOptions: { expiresIn: '7 days' },
     }),
   ],
-  providers: [AuthService, UsersService, PrismaService, ProfilesService],
+  providers: [
+    AuthService,
+    UsersService,
+    PrismaService,
+    ProfilesService,
+    BcryptService,
+  ],
   controllers: [AuthController],
   exports: [AuthService],
 })

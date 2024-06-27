@@ -11,6 +11,7 @@ import { ProfilesService } from 'src/profiles/profiles.service';
 import { UsersService } from '../users/users.service';
 import { AuthRegisterDTO } from './dto/auth-register.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
+import { BcryptService } from './bcrypt.service';
 
 @Injectable()
 export class AuthService {
@@ -19,6 +20,7 @@ export class AuthService {
     private jwtService: JwtService,
     private profileService: ProfilesService,
     private prisma: PrismaService,
+    private bcryptService: BcryptService,
   ) {}
 
   async register(user: AuthRegisterDTO) {
@@ -40,7 +42,12 @@ export class AuthService {
   ): Promise<{ access_token: string; userInfo: UserSignInInfo }> {
     const user = await this.usersService.getUserWithProfile(username);
     if (!user) throw new NotFoundException('Usuário não encontrado!');
-    if (user?.password !== password) {
+
+    const isValidPassword = await this.bcryptService.comparePasswords(
+      password,
+      user.password,
+    );
+    if (!isValidPassword) {
       throw new UnauthorizedException(
         'Credenciais incorretas, tente novamente',
       );
@@ -142,9 +149,11 @@ export class AuthService {
       throw new BadRequestException('Token inválido ou expirado!');
     }
 
+    const hashPassword = await this.bcryptService.hashPassword(password);
+
     const updatedUser = await this.prisma.users.update({
       where: { email: isValidToken.email },
-      data: { password: password },
+      data: { password: hashPassword },
     });
 
     return { message: 'Senha modificada com sucesso!' };
