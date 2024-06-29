@@ -3,27 +3,23 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateTransactionDTO } from './dto/create-transaction.dto';
+import { TransactionsRepository } from './transactions.repository';
 
 @Injectable()
 export class TransactionsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private transactionsRepository: TransactionsRepository) {}
 
   async getAllTransactions() {
-    const transactions = await this.prisma.transaction.findMany({
-      include: {
-        module: true,
-      },
-    });
-
-    return transactions;
+    return await this.transactionsRepository.getAllTransactions();
   }
 
   async createTransaction(transaction: CreateTransactionDTO) {
-    const nameInUse = await this.prisma.transaction.findFirst({
-      where: { name: transaction.name, module_id: transaction.module_id },
-    });
+    const nameInUse =
+      await this.transactionsRepository.getTransactionByNameAndModule(
+        transaction.name,
+        transaction.module_id,
+      );
 
     if (nameInUse) {
       throw new ConflictException(
@@ -31,17 +27,15 @@ export class TransactionsService {
       );
     }
 
-    const newTransaction = await this.prisma.transaction.create({
-      data: transaction,
-    });
-
-    return newTransaction;
+    return await this.transactionsRepository.createTransaction(transaction);
   }
 
   async updateTransaction(id: number, transaction: CreateTransactionDTO) {
-    const nameInUse = await this.prisma.transaction.findFirst({
-      where: { name: transaction.name, module_id: transaction.module_id },
-    });
+    const nameInUse =
+      await this.transactionsRepository.getTransactionByNameAndModule(
+        transaction.name,
+        transaction.module_id,
+      );
 
     if (nameInUse && nameInUse.id !== id) {
       throw new ConflictException(
@@ -49,43 +43,17 @@ export class TransactionsService {
       );
     }
 
-    const updatedTransaction = await this.prisma.transaction.update({
-      where: { id },
-      data: { ...transaction, updated_at: new Date() },
-    });
-
-    return updatedTransaction;
+    return this.transactionsRepository.updateTransaction(id, transaction);
   }
 
   async deleteTransaction(id: number) {
-    const transactionExists = await this.prisma.transaction.findUnique({
-      where: { id },
-    });
+    const transactionExists =
+      await this.transactionsRepository.getTransactionById(id);
 
     if (!transactionExists) {
       throw new NotFoundException(`Transação com o id: ${id} não encontrada"`);
     }
 
-    const deletedTransaction = await this.prisma.$transaction(
-      async (prisma) => {
-        await prisma.profile_function.deleteMany({
-          where: {
-            transaction_id: id,
-          },
-        });
-
-        await prisma.profile_transaction.deleteMany({
-          where: {
-            transaction_id: id,
-          },
-        });
-
-        return await prisma.transaction.delete({
-          where: { id },
-        });
-      },
-    );
-
-    return deletedTransaction;
+    return await this.transactionsRepository.deleteTransaction(id);
   }
 }
