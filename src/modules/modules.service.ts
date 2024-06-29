@@ -5,72 +5,49 @@ import {
 } from '@nestjs/common';
 import { Module } from '@prisma/client';
 import { PayloadUserInfo } from 'src/models/UserModels';
-import { PrismaService } from 'src/prisma/prisma.service';
+import { ProfilesRepository } from 'src/profiles/profiles.repository';
+import { UsersRepository } from 'src/users/users.repository';
 import { CreateModuleDTO } from './dto/create-module.dto';
+import { ModulesRepository } from './modules.repository';
 
 @Injectable()
 export class ModulesService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private modulesRepository: ModulesRepository,
+    private usersRepository: UsersRepository,
+    private profilesRepository: ProfilesRepository,
+  ) {}
 
   async getModules(): Promise<Module[]> {
-    const modules = await this.prisma.module.findMany();
-
-    return modules;
+    return await this.modulesRepository.getModules();
   }
 
   async getModuleById(moduleId: number) {
-    return this.prisma.module.findUnique({
-      where: { id: moduleId },
-      include: {
-        transactions: {
-          select: {
-            id: true,
-            name: true,
-            description: true,
-            created_at: true,
-          },
-        },
-        functions: {
-          select: {
-            id: true,
-            name: true,
-            description: true,
-            created_at: true,
-          },
-        },
-      },
-    });
+    return await this.modulesRepository.getModuleById(moduleId);
   }
 
   async createModule(module: CreateModuleDTO) {
-    const nameInUse = await this.prisma.module.findFirst({
-      where: { name: module.name },
-    });
+    const nameInUse = await this.modulesRepository.getModuleByName(module.name);
 
-    if (nameInUse)
+    if (nameInUse) {
       throw new ConflictException(
         `Módulo com o nome: ${module.name} já existe`,
       );
+    }
 
-    const newModule = await this.prisma.module.create({
-      data: module,
-    });
+    const newModule = await this.modulesRepository.createModule(module);
 
     return newModule;
   }
 
   async updateModule(id: number, module: CreateModuleDTO) {
-    const moduleExists = await this.prisma.module.findFirst({ where: { id } });
+    const moduleExists = await this.modulesRepository.getModuleById(id);
 
     if (!moduleExists) {
       throw new NotFoundException(`Módulo com o id: ${id} não encontrado`);
     }
 
-    const nameInUse = await this.prisma.module.findFirst({
-      where: {
-        name: module.name,
-      },
-    });
+    const nameInUse = await this.modulesRepository.getModuleByName(module.name);
 
     if (nameInUse && nameInUse.id !== id) {
       throw new ConflictException(
@@ -78,78 +55,37 @@ export class ModulesService {
       );
     }
 
-    const updatedModule = await this.prisma.module.update({
-      where: { id },
-      data: { ...module, updated_at: new Date() },
-    });
+    const updatedModule = await this.modulesRepository.updateModule(id, module);
 
     return updatedModule;
   }
 
   async deleteModule(id: number) {
-    const moduleExists = await this.prisma.module.findFirst({
-      where: { id },
-    });
+    const moduleExists = await this.modulesRepository.getModuleById(id);
 
     if (!moduleExists) {
       throw new NotFoundException(`Módulo com o ID dado não encontrado`);
     }
-    return this.prisma.$transaction(async (prisma) => {
-      await prisma.profile_function.deleteMany({
-        where: { function: { module_id: id } },
-      });
 
-      await prisma.profile_transaction.deleteMany({
-        where: { transaction: { module_id: id } },
-      });
-
-      await prisma.profile_module.deleteMany({
-        where: {
-          module_id: id,
-        },
-      });
-
-      await prisma.transaction.deleteMany({
-        where: { module_id: id },
-      });
-      await prisma.function.deleteMany({
-        where: { module_id: id },
-      });
-
-      return prisma.module.delete({
-        where: { id: id },
-      });
-    });
+    return await this.modulesRepository.deleteModule(id);
   }
 
   async getUserModules(user: PayloadUserInfo) {
-    const userExists = await this.prisma.users.findUnique({
-      where: {
-        id: user.sub,
-      },
-    });
+    const userExists = await this.usersRepository.getUserById(user.sub);
     if (!userExists) {
       throw new NotFoundException('Usuário não encontrado!');
     }
 
     const { profile_id } = userExists;
 
-    const profile = await this.prisma.profile.findUnique({
-      where: { id: profile_id },
-      include: {
-        profile_modules: {
-          include: {
-            module: true,
-          },
-        },
-      },
-    });
+    const profileWithModules =
+      await this.profilesRepository.findProfileWithProfileModules(profile_id);
 
-    if (!profile) {
+    if (!profileWithModules) {
       throw new Error('Perfil não encontrado');
     }
 
-    return profile.profile_modules.map((pm) => ({
+    return profileWithModules.profile_modules.map((pm) => ({
       id: pm.module.id,
       name: pm.module.name,
       description: pm.module.description,
@@ -161,11 +97,7 @@ export class ModulesService {
   }
 
   async getUserModuleById(module_id: number, user: PayloadUserInfo) {
-    const userExists = await this.prisma.users.findUnique({
-      where: {
-        id: user.sub,
-      },
-    });
+    const userExists = await this.usersRepository.getUserById(user.sub);
 
     if (!userExists) {
       throw new NotFoundException('Usuário não encontrado!');
@@ -173,41 +105,10 @@ export class ModulesService {
 
     const { profile_id } = userExists;
 
-    const module = await this.prisma.module.findFirst({
-      where: {
-        id: module_id,
-        profile_modules: {
-          some: {
-            profile_id,
-          },
-        },
-      },
-      include: {
-        transactions: {
-          include: {
-            profile_transactions: {
-              where: {
-                profile_id,
-              },
-              include: {
-                transaction: {
-                  include: {
-                    profile_function: {
-                      where: {
-                        profile_id,
-                      },
-                      include: {
-                        function: true,
-                      },
-                    },
-                  },
-                },
-              },
-            },
-          },
-        },
-      },
-    });
+    const module = await this.modulesRepository.getUserModuleWithDetail(
+      module_id,
+      profile_id,
+    );
 
     if (!module) {
       throw new NotFoundException('Módulo não encontrado para este perfil');
