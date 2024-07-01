@@ -190,6 +190,8 @@ export class AuthService {
         hashPassword,
       );
 
+      await this.authRepository.deleteToken(token);
+
       return { message: 'Senha modificada com sucesso!' };
     } catch (error) {
       errorHandler(error, 'Erro ao redefinir senha');

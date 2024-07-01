@@ -41,4 +41,17 @@ export class AuthRepository {
       errorHandler(error, 'Erro ao criar solicitação de redefinição de senha');
     }
   }
+
+  async deleteToken(token: string) {
+    try {
+      return await this.prisma.password_reset.delete({
+        where: { token },
+      });
+    } catch (error) {
+      console.error('Erro ao deletar o token de redefinição de senha:', error);
+      throw new InternalServerErrorException(
+        'Erro ao deletar o token de redefinição de senha',
+      );
+    }
+  }
 }
