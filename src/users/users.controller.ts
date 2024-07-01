@@ -9,12 +9,13 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { Users } from '@prisma/client';
+import { AdminGuard } from 'src/auth/admin.guard';
 import { AuthGuard } from 'src/auth/auth.guard';
 import { CreateUserDTO } from './dto/create-user.dto';
 import { UsersService } from './users.service';
 
 @Controller('users')
-@UseGuards(AuthGuard)
+@UseGuards(AuthGuard, AdminGuard)
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
   @Get()
