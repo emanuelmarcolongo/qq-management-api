@@ -1,4 +1,11 @@
-import { Body, Controller, Get, Param, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  InternalServerErrorException,
+  Param,
+  Post,
+} from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { AuthLoginDTO } from './dto/auth-login.dto';
 import {
@@ -17,7 +24,13 @@ export class AuthController {
 
   @Post('request-password-reset')
   async RequestPasswordReset(@Body() body: RequestPasswordResetDTO) {
-    return this.authService.requestPasswordReset(body.email);
+    try {
+      return this.authService.requestPasswordReset(body.email);
+    } catch (error) {
+      return new InternalServerErrorException(
+        'Algo deu errado, tente novamente!',
+      );
+    }
   }
 
   @Get('validate-token/:token')

@@ -9,6 +9,7 @@ import { UsersRepository } from 'src/users/users.repository';
 import { UsersService } from 'src/users/users.service';
 import { UsersModule } from '../users/users.module';
 import { AuthController } from './auth.controller';
+import { AuthRepository } from './auth.repository';
 import { AuthService } from './auth.service';
 import { BcryptService } from './bcrypt.service';
 import { jwtConstants } from './constants';
@@ -32,6 +33,8 @@ import { jwtConstants } from './constants';
     UsersRepository,
     ModulesRepository,
     TransactionsRepository,
+    UsersRepository,
+    AuthRepository,
   ],
   controllers: [AuthController],
   exports: [AuthService],

@@ -2,45 +2,69 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
+  InternalServerErrorException,
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { UserSignInInfo } from 'src/models/UserModels';
-import { ProfilesService } from 'src/profiles/profiles.service';
-import { UsersService } from '../users/users.service';
-import { AuthRegisterDTO } from './dto/auth-register.dto';
-import { PrismaService } from 'src/prisma/prisma.service';
+import { ProfilesRepository } from 'src/profiles/profiles.repository';
+import { CreateUserDTO } from 'src/users/dto/create-user.dto';
+import { UsersRepository } from 'src/users/users.repository';
+import { AuthRepository } from './auth.repository';
 import { BcryptService } from './bcrypt.service';
 
 @Injectable()
 export class AuthService {
   constructor(
-    private usersService: UsersService,
     private jwtService: JwtService,
-    private profileService: ProfilesService,
-    private prisma: PrismaService,
     private bcryptService: BcryptService,
+    private usersRepository: UsersRepository,
+    private profilesRepository: ProfilesRepository,
+    private authRepository: AuthRepository,
   ) {}
 
-  async register(user: AuthRegisterDTO) {
-    const userExists = await this.usersService.getUserByEmail(user.email);
-    if (userExists)
+  async register(user: CreateUserDTO) {
+    if (user.registration.length !== 6)
+      throw new BadRequestException('A matrícula deve conter 6 caracteres');
+    const usernameInUse =
+      await this.usersRepository.getUserWithProfileByUsername(user.username);
+    if (usernameInUse)
       throw new ConflictException(
         'Já existe um usuário com o e-mail ou nome de usuário',
       );
 
-    const profileExists = await this.profileService.existsById(user.profile_id);
+    const emailInUse = await this.usersRepository.getUserByEmail(user.email);
+    if (emailInUse)
+      throw new ConflictException(
+        'Já existe um usuário com o e-mail ou nome de usuário',
+      );
+
+    const registrationInUse = await this.usersRepository.getUserByRegistration(
+      user.registration,
+    );
+
+    if (registrationInUse)
+      throw new ConflictException('Já existe um usuário com a matrícula');
+
+    const profileExists = await this.profilesRepository.getProfileById(
+      user.profile_id,
+    );
     if (!profileExists) throw new NotFoundException('Perfil não encontrado!');
 
-    return this.usersService.register(user);
+    const hashPassword = await this.bcryptService.hashPassword(
+      user.registration,
+    );
+
+    return await this.usersRepository.createUser(user, hashPassword);
   }
 
   async signIn(
     username: string,
     password: string,
   ): Promise<{ access_token: string; userInfo: UserSignInInfo }> {
-    const user = await this.usersService.getUserWithProfile(username);
+    const user =
+      await this.usersRepository.getUserWithProfileByUsername(username);
     if (!user) throw new NotFoundException('Usuário não encontrado!');
 
     const isValidPassword = await this.bcryptService.comparePasswords(
@@ -74,29 +98,22 @@ export class AuthService {
   }
 
   async requestPasswordReset(email: string) {
-    const userExists = await this.prisma.users.findFirst({
-      where: { email },
-    });
+    const userExists = await this.usersRepository.getUserByEmail(email);
 
     if (!userExists) {
-      throw new NotFoundException('Usuário com o Email dado não encontrado!');
+      throw new NotFoundException(
+        'Usuário com o email fornecido não encontrado!',
+      );
     }
 
     const token = crypto.randomUUID().replaceAll('-', '');
     const expiration_date = new Date(Date.now() + 10 * 60 * 1000);
 
-    const passwordRequest = await this.prisma.password_reset.upsert({
-      where: { email },
-      update: {
-        token,
-        expiration_date,
-      },
-      create: {
-        email,
-        token,
-        expiration_date,
-      },
-    });
+    const passwordRequest = await this.authRepository.createPasswordRequest(
+      email,
+      token,
+      expiration_date,
+    );
 
     const fetchOptions = {
       method: 'POST',
@@ -116,20 +133,22 @@ export class AuthService {
       );
 
       if (!response.ok) {
-        throw new Error('Falha ao enviar e-mail via Fast API');
+        throw new InternalServerErrorException(
+          'Falha no envio de e-mail, fale com o responsável do sistema',
+        );
       }
     } catch (error) {
       console.error('Fetch error:', error);
-      throw new Error('Falha ao enviar e-mail via Fast API');
+      throw new InternalServerErrorException(
+        'Falha no envio de e-mail, fale com o responsável do sistema',
+      );
     }
 
     return { message: 'Redefinição de senha solicitada com sucesso!' };
   }
 
   async validateToken(token: string) {
-    const tokenExists = await this.prisma.password_reset.findFirst({
-      where: { token },
-    });
+    const tokenExists = await this.authRepository.getPasswordResetToken(token);
 
     if (!tokenExists) {
       throw new BadRequestException('Token inválido ou expirado!');
@@ -151,10 +170,10 @@ export class AuthService {
 
     const hashPassword = await this.bcryptService.hashPassword(password);
 
-    const updatedUser = await this.prisma.users.update({
-      where: { email: isValidToken.email },
-      data: { password: hashPassword },
-    });
+    const updatedUser = await this.usersRepository.updateUserPassword(
+      isValidToken.email,
+      hashPassword,
+    );
 
     return { message: 'Senha modificada com sucesso!' };
   }

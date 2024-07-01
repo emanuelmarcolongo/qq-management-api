@@ -5,117 +5,82 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { Users } from '@prisma/client';
-import { UserWithProfile } from 'src/models/UserModels';
-import { PrismaService } from 'src/prisma/prisma.service';
-import { ProfilesService } from 'src/profiles/profiles.service';
-import { CreateUserDTO } from './dto/create-user.dto';
 import { BcryptService } from 'src/auth/bcrypt.service';
+import { UserWithProfile } from 'src/models/UserModels';
+import { ProfilesRepository } from 'src/profiles/profiles.repository';
+import { CreateUserDTO } from './dto/create-user.dto';
+import { UsersRepository } from './users.repository';
 
 @Injectable()
 export class UsersService {
   constructor(
-    private prisma: PrismaService,
-    private profileService: ProfilesService,
     private bcrytService: BcryptService,
+    private usersRepository: UsersRepository,
+    private profilesRepository: ProfilesRepository,
   ) {}
 
   async getAllUsers(): Promise<Users[] | null> {
-    return await this.prisma.users.findMany({
-      include: {
-        profile: {
-          select: {
-            id: true,
-            name: true,
-          },
-        },
-      },
-    });
+    return await this.usersRepository.getAllUsers();
   }
 
   async findByUsername(username: string): Promise<Users | null> {
-    return await this.prisma.users.findUnique({
-      where: {
-        username,
-      },
-    });
+    return await this.usersRepository.findByUsername(username);
   }
 
   async getUserWithProfile(username: string): Promise<UserWithProfile | null> {
-    return await this.prisma.users.findUnique({
-      where: {
-        username,
-      },
-      include: {
-        profile: true,
-      },
-    });
+    return await this.usersRepository.getUserWithProfileByUsername(username);
   }
 
   async getUserByEmail(email: string): Promise<Users | null> {
-    return await this.prisma.users.findUnique({
-      where: {
-        email,
-      },
-    });
+    return this.usersRepository.getUserByEmail(email);
   }
 
   async register(user: CreateUserDTO) {
     if (user.registration.length !== 6)
       throw new BadRequestException('A matrícula deve conter 6 caracteres');
-    const usernameInUse = await this.prisma.users.findFirst({
-      where: { username: user.username },
-    });
+    const usernameInUse =
+      await this.usersRepository.getUserWithProfileByUsername(user.username);
     if (usernameInUse)
       throw new ConflictException(
         'Já existe um usuário com o e-mail ou nome de usuário',
       );
 
-    const emailInUse = await this.prisma.users.findFirst({
-      where: { email: user.email },
-    });
+    const emailInUse = await this.usersRepository.getUserByEmail(user.email);
     if (emailInUse)
       throw new ConflictException(
         'Já existe um usuário com o e-mail ou nome de usuário',
       );
 
-    const registrationInUse = await this.prisma.users.findFirst({
-      where: { registration: user.registration },
-    });
+    const registrationInUse = await this.usersRepository.getUserByRegistration(
+      user.registration,
+    );
 
     if (registrationInUse)
       throw new ConflictException('Já existe um usuário com a matrícula');
 
-    const profileExists = await this.profileService.existsById(user.profile_id);
+    const profileExists = await this.profilesRepository.getProfileById(
+      user.profile_id,
+    );
     if (!profileExists) throw new NotFoundException('Perfil não encontrado!');
 
     const hashPassword = await this.bcrytService.hashPassword(
       user.registration,
     );
 
-    return await this.prisma.users.create({
-      data: { ...user, password: hashPassword },
-    });
+    return await this.usersRepository.createUser(user, hashPassword);
   }
 
   async updateUser(id: number, user: CreateUserDTO) {
-    const userExists = await this.prisma.users.findUnique({
-      where: { id },
-    });
+    const userExists = await this.usersRepository.getUserById(id);
 
     if (!userExists) {
       throw new NotFoundException(`Usuário com o ${id} não encontrado!`);
     }
 
-    const conflictingUser = await this.prisma.users.findFirst({
-      where: {
-        OR: [
-          { registration: user.registration },
-          { username: user.username },
-          { email: user.email },
-        ],
-        NOT: { id },
-      },
-    });
+    const conflictingUser = await this.usersRepository.getConflictingUser(
+      id,
+      user,
+    );
 
     if (conflictingUser) {
       if (conflictingUser.registration === user.registration) {
@@ -131,28 +96,16 @@ export class UsersService {
       }
     }
 
-    const updatedUser = await this.prisma.users.update({
-      where: { id },
-      data: {
-        ...user,
-        updated_at: new Date(),
-      },
-    });
-    return updatedUser;
+    return await this.usersRepository.updateUser(id, user);
   }
 
   async deleteUser(id: number) {
-    const userExists = await this.prisma.users.findFirst({
-      where: { id },
-    });
+    const userExists = await this.usersRepository.getUserById(id);
 
     if (!userExists) {
       throw new NotFoundException(`Usuário com o ID:${id} dado não encontrado`);
     }
-    const deletedUser = await this.prisma.users.delete({
-      where: { id },
-    });
 
-    return deletedUser;
+    return await this.usersRepository.deleteUser(id);
   }
 }
