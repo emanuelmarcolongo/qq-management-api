@@ -313,4 +313,27 @@ export class ProfilesRepository {
       });
     });
   }
+
+  async getProfileFunctionRelation(profile_id: number, function_id: number) {
+    return await this.prisma.profile_function.findFirst({
+      where: {
+        profile_id,
+        function_id,
+      },
+    });
+  }
+
+  async deleteProfileFunctionRelation(
+    profile_id: number,
+    transaction_id: number,
+    function_id: number,
+  ) {
+    return await this.prisma.profile_function.deleteMany({
+      where: {
+        profile_id,
+        transaction_id,
+        function_id,
+      },
+    });
+  }
 }

@@ -5,29 +5,34 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
+import { ProfilesRepository } from 'src/profiles/profiles.repository';
+import { TransactionsRepository } from 'src/transactions/transactions.repository';
 import {
   CreateFunctionDTO,
   CreateProfileFunctionDTO,
 } from './dto/create-function.dto';
+import { FunctionsRepository } from './functions.repository';
 
 @Injectable()
 export class FunctionsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private functionsRepository: FunctionsRepository,
+    private profilesRepository: ProfilesRepository,
+    private transactionRepository: TransactionsRepository,
+  ) {}
 
   async getAllFunctions() {
-    const functions = await this.prisma.function.findMany({
-      include: {
-        module: true,
-      },
-    });
+    const functions = await this.functionsRepository.getAllFunctions();
 
     return functions;
   }
 
   async createFunction(func: CreateFunctionDTO) {
-    const nameInUse = await this.prisma.function.findFirst({
-      where: { name: func.name, module_id: func.module_id },
-    });
+    const nameInUse = await this.functionsRepository.getFunctionByName(
+      func.name,
+      func.module_id,
+    );
 
     if (nameInUse) {
       throw new ConflictException(
@@ -35,17 +40,14 @@ export class FunctionsService {
       );
     }
 
-    const newFunction = await this.prisma.function.create({
-      data: func,
-    });
-
-    return newFunction;
+    return await this.functionsRepository.createFunction(func);
   }
 
   async updateFunction(id: number, func: CreateFunctionDTO) {
-    const nameInUse = await this.prisma.function.findFirst({
-      where: { name: func.name, module_id: func.module_id },
-    });
+    const nameInUse = await this.functionsRepository.getFunctionByName(
+      func.name,
+      func.module_id,
+    );
 
     if (nameInUse && nameInUse.id !== id) {
       throw new ConflictException(
@@ -53,44 +55,30 @@ export class FunctionsService {
       );
     }
 
-    const updatedFunction = await this.prisma.function.update({
-      where: { id },
-      data: { ...func, updated_at: new Date() },
-    });
-
-    return updatedFunction;
+    return await this.functionsRepository.updateFunction(id, func);
   }
 
   async deleteFunction(id: number) {
-    const functionExists = await this.prisma.function.findUnique({
-      where: { id },
-    });
+    const functionExists = await this.functionsRepository.getFunctionById(id);
 
     if (!functionExists) {
       throw new NotFoundException(`Função com o id: ${id} não encontrada`);
     }
 
-    const deletedFunction = await this.prisma.$transaction(async (prisma) => {
-      await prisma.profile_function.deleteMany({
-        where: { function_id: id },
-      });
-
-      return await prisma.function.delete({
-        where: { id },
-      });
-    });
+    const deletedFunction = await this.functionsRepository.deleteFunction(id);
 
     return deletedFunction;
   }
 
   async getAvailableFunctions(profile_id: number, transaction_id: number) {
-    const profileExists = await this.prisma.profile.findUnique({
-      where: { id: profile_id },
-    });
+    const profileExists =
+      await this.profilesRepository.getProfileById(profile_id);
 
-    const transactionExist = await this.prisma.transaction.findUnique({
-      where: { id: transaction_id },
-    });
+    if (!profileExists) {
+      throw new NotFoundException(`Perfil com o Id fornecido não encontrado!`);
+    }
+    const transactionExist =
+      await this.transactionRepository.getTransactionById(transaction_id);
 
     if (!transactionExist) {
       throw new NotFoundException(
@@ -98,38 +86,24 @@ export class FunctionsService {
       );
     }
 
-    if (!profileExists) {
-      throw new NotFoundException(`Perfil com o Id fornecido não encontrado!`);
-    }
-
-    const transactionRelation = await this.prisma.profile_transaction.findFirst(
-      {
-        where: {
-          transaction_id,
-          profile_id,
-        },
-      },
-    );
+    const transactionRelation =
+      await this.profilesRepository.getProfileTransactionRelation(
+        profile_id,
+        transaction_id,
+      );
 
     if (!transactionRelation) {
       throw new UnauthorizedException(
-        'Transação não vinculada ao perfil, vincule antes de vincular uma transação',
+        'Transação não vinculada ao perfil, vincule antes de vincular uma função',
       );
     }
 
-    const profileAvailableFunctions = await this.prisma.function.findMany({
-      where: {
-        id: {
-          notIn: (
-            await this.prisma.profile_function.findMany({
-              where: { profile_id, transaction_id },
-              select: { function_id: true },
-            })
-          ).map((func) => func.function_id),
-        },
-        module_id: transactionExist.module_id,
-      },
-    });
+    const profileAvailableFunctions =
+      await this.functionsRepository.getProfileAvailableFunctions(
+        profile_id,
+        transaction_id,
+        transactionExist.module_id,
+      );
 
     return profileAvailableFunctions;
   }
@@ -139,12 +113,11 @@ export class FunctionsService {
     function_id: number,
     transaction_id: number,
   ) {
-    const profileFunctionExists = await this.prisma.profile_function.findFirst({
-      where: {
+    const profileFunctionExists =
+      await this.profilesRepository.getProfileFunctionRelation(
         profile_id,
         function_id,
-      },
-    });
+      );
 
     if (!profileFunctionExists) {
       throw new NotFoundException(
@@ -152,15 +125,11 @@ export class FunctionsService {
       );
     }
 
-    await this.prisma.$transaction(async (prisma) => {
-      await prisma.profile_function.deleteMany({
-        where: {
-          profile_id,
-          transaction_id,
-          function_id,
-        },
-      });
-    });
+    return await this.profilesRepository.deleteProfileFunctionRelation(
+      profile_id,
+      transaction_id,
+      function_id,
+    );
   }
 
   async postProfileFunction(
@@ -169,21 +138,15 @@ export class FunctionsService {
     body: CreateProfileFunctionDTO,
   ) {
     const { functionIds } = body;
-    const profileExists = await this.prisma.profile.findUnique({
-      where: {
-        id: profile_id,
-      },
-    });
+    const profileExists =
+      await this.profilesRepository.getProfileById(profile_id);
 
     if (!profileExists) {
       throw new NotFoundException(`Perfil com o Id fornecido não encontrado!`);
     }
 
-    const functionsExists = await this.prisma.function.findMany({
-      where: {
-        id: { in: functionIds },
-      },
-    });
+    const functionsExists =
+      await this.functionsRepository.getManyFunctionsById(functionIds);
 
     if (functionsExists.length !== functionIds.length) {
       throw new NotFoundException(
@@ -191,24 +154,10 @@ export class FunctionsService {
       );
     }
 
-    const result = await this.prisma.$transaction(
-      functionIds.map((function_id) =>
-        this.prisma.profile_function.upsert({
-          where: {
-            profile_id_transaction_id_function_id: {
-              profile_id: profile_id,
-              transaction_id: transaction_id,
-              function_id,
-            },
-          },
-          update: {},
-          create: {
-            profile_id,
-            transaction_id,
-            function_id,
-          },
-        }),
-      ),
+    const result = await this.functionsRepository.createProfileFunctionRelation(
+      functionIds,
+      profile_id,
+      transaction_id,
     );
 
     return result;
