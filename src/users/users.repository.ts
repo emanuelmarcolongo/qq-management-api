@@ -12,4 +12,12 @@ export class UsersRepository {
       },
     });
   }
+
+  async getUsersWithProfile(profile_id: number) {
+    return await this.prisma.users.findFirst({
+      where: {
+        profile_id,
+      },
+    });
+  }
 }

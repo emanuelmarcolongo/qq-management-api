@@ -126,4 +126,14 @@ export class ModulesRepository {
       },
     });
   }
+
+  async getManyModulesById(module_ids: number[]) {
+    const modulesExist = await this.prisma.module.findMany({
+      where: {
+        id: { in: module_ids },
+      },
+    });
+
+    return modulesExist;
+  }
 }

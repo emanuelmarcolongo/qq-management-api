@@ -1,13 +1,17 @@
 import { Module } from '@nestjs/common';
-import { AuthService } from './auth.service';
-import { UsersModule } from '../users/users.module';
 import { JwtModule } from '@nestjs/jwt';
-import { AuthController } from './auth.controller';
-import { UsersService } from 'src/users/users.service';
+import { ModulesRepository } from 'src/modules/modules.repository';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { jwtConstants } from './constants';
+import { ProfilesRepository } from 'src/profiles/profiles.repository';
 import { ProfilesService } from 'src/profiles/profiles.service';
+import { TransactionsRepository } from 'src/transactions/transactions.repository';
+import { UsersRepository } from 'src/users/users.repository';
+import { UsersService } from 'src/users/users.service';
+import { UsersModule } from '../users/users.module';
+import { AuthController } from './auth.controller';
+import { AuthService } from './auth.service';
 import { BcryptService } from './bcrypt.service';
+import { jwtConstants } from './constants';
 
 @Module({
   imports: [
@@ -24,6 +28,10 @@ import { BcryptService } from './bcrypt.service';
     PrismaService,
     ProfilesService,
     BcryptService,
+    ProfilesRepository,
+    UsersRepository,
+    ModulesRepository,
+    TransactionsRepository,
   ],
   controllers: [AuthController],
   exports: [AuthService],

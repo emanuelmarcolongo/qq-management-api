@@ -9,14 +9,13 @@ import {
   Put,
   UseGuards,
 } from '@nestjs/common';
-import { ProfilesService } from './profiles.service';
 import { AuthGuard } from 'src/auth/auth.guard';
 import {
   CreateProfileDTO,
   CreateProfileModuleDTO,
   CreateProfileTransactionDTO,
-  DeleteProfileModuleDTO,
 } from './dto/create-profile.dto';
+import { ProfilesService } from './profiles.service';
 
 @Controller('profiles')
 @UseGuards(AuthGuard)

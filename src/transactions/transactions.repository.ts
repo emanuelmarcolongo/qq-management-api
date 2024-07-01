@@ -66,4 +66,12 @@ export class TransactionsRepository {
 
     return deletedTransaction;
   }
+
+  async getManyTransactionsById(transactions_ids: number[]) {
+    return await this.prisma.transaction.findMany({
+      where: {
+        id: { in: transactions_ids },
+      },
+    });
+  }
 }
