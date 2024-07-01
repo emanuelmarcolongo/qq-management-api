@@ -1,6 +1,5 @@
 import {
   Body,
-  ConflictException,
   Controller,
   Delete,
   Get,
@@ -10,10 +9,10 @@ import {
   Put,
   UseGuards,
 } from '@nestjs/common';
-import { UsersService } from './users.service';
 import { Users } from '@prisma/client';
 import { AuthGuard } from 'src/auth/auth.guard';
 import { CreateUserDTO } from './dto/create-user.dto';
+import { UsersService } from './users.service';
 
 @Controller('users')
 @UseGuards(AuthGuard)
