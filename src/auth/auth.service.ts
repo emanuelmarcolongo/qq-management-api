@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   InternalServerErrorException,
   NotFoundException,
@@ -7,6 +8,8 @@ import {
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { UserSignInInfo } from 'src/models/UserModels';
+import { ProfilesRepository } from 'src/profiles/profiles.repository';
+import { CreateUserDTO } from 'src/users/dto/create-user.dto';
 import { UsersRepository } from 'src/users/users.repository';
 import { errorHandler } from 'src/utils/ErrorHandler';
 import { AuthRepository } from './auth.repository';
@@ -19,6 +22,7 @@ export class AuthService {
     private bcryptService: BcryptService,
     private usersRepository: UsersRepository,
     private authRepository: AuthRepository,
+    private profilesRepository: ProfilesRepository,
   ) {}
 
   async signIn(
@@ -107,6 +111,48 @@ export class AuthService {
       return { message: 'Redefinição de senha solicitada com sucesso!' };
     } catch (error) {
       errorHandler(error, 'Erro ao solicitar redefinição de senha');
+    }
+  }
+
+  async register(user: CreateUserDTO) {
+    try {
+      if (user.registration.length !== 6) {
+        throw new BadRequestException('A matrícula deve conter 6 caracteres');
+      }
+
+      const usernameInUse =
+        await this.usersRepository.getUserWithProfileByUsername(user.username);
+      if (usernameInUse) {
+        throw new ConflictException(
+          'Já existe um usuário com o nome de usuário',
+        );
+      }
+
+      const emailInUse = await this.usersRepository.getUserByEmail(user.email);
+      if (emailInUse) {
+        throw new ConflictException('Já existe um usuário com o e-mail');
+      }
+
+      const registrationInUse =
+        await this.usersRepository.getUserByRegistration(user.registration);
+      if (registrationInUse) {
+        throw new ConflictException('Já existe um usuário com a matrícula');
+      }
+
+      const profileExists = await this.profilesRepository.getProfileById(
+        user.profile_id,
+      );
+      if (!profileExists) {
+        throw new NotFoundException('Perfil não encontrado!');
+      }
+
+      const hashPassword = await this.bcryptService.hashPassword(
+        user.registration,
+      );
+
+      return await this.usersRepository.createUser(user, hashPassword);
+    } catch (error) {
+      errorHandler(error, 'Erro ao registrar usuário');
     }
   }
 

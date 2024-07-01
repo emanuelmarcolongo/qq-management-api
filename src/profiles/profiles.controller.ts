@@ -9,6 +9,7 @@ import {
   Put,
   UseGuards,
 } from '@nestjs/common';
+import { AdminGuard } from 'src/auth/admin.guard';
 import { AuthGuard } from 'src/auth/auth.guard';
 import {
   CreateProfileDTO,
@@ -18,7 +19,7 @@ import {
 import { ProfilesService } from './profiles.service';
 
 @Controller('profiles')
-@UseGuards(AuthGuard)
+@UseGuards(AuthGuard, AdminGuard)
 export class ProfilesController {
   constructor(private readonly profileService: ProfilesService) {}
 

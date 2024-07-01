@@ -9,12 +9,13 @@ import {
   Put,
   UseGuards,
 } from '@nestjs/common';
+import { AdminGuard } from 'src/auth/admin.guard';
 import { AuthGuard } from 'src/auth/auth.guard';
-import { TransactionsService } from './transactions.service';
 import { CreateTransactionDTO } from './dto/create-transaction.dto';
+import { TransactionsService } from './transactions.service';
 
 @Controller('transactions')
-@UseGuards(AuthGuard)
+@UseGuards(AuthGuard, AdminGuard)
 export class TransactionsController {
   constructor(private readonly transactionService: TransactionsService) {}
   @Post()

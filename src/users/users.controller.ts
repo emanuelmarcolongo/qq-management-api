@@ -5,7 +5,6 @@ import {
   Get,
   Param,
   ParseIntPipe,
-  Post,
   Put,
   UseGuards,
 } from '@nestjs/common';
@@ -22,11 +21,6 @@ export class UsersController {
   async getUsers(): Promise<Users[] | null> {
     const users = await this.usersService.getAllUsers();
     return users;
-  }
-
-  @Post('register')
-  async register(@Body() body: CreateUserDTO) {
-    return this.usersService.register(body);
   }
 
   @Put(':id')

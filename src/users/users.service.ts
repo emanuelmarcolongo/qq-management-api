@@ -1,5 +1,4 @@
 import {
-  BadRequestException,
   ConflictException,
   Injectable,
   NotFoundException,
@@ -52,48 +51,6 @@ export class UsersService {
       return await this.usersRepository.getUserByEmail(email);
     } catch (error) {
       errorHandler(error, `Erro ao buscar usuário pelo email ${email}`);
-    }
-  }
-
-  async register(user: CreateUserDTO) {
-    try {
-      if (user.registration.length !== 6) {
-        throw new BadRequestException('A matrícula deve conter 6 caracteres');
-      }
-
-      const usernameInUse =
-        await this.usersRepository.getUserWithProfileByUsername(user.username);
-      if (usernameInUse) {
-        throw new ConflictException(
-          'Já existe um usuário com o nome de usuário',
-        );
-      }
-
-      const emailInUse = await this.usersRepository.getUserByEmail(user.email);
-      if (emailInUse) {
-        throw new ConflictException('Já existe um usuário com o e-mail');
-      }
-
-      const registrationInUse =
-        await this.usersRepository.getUserByRegistration(user.registration);
-      if (registrationInUse) {
-        throw new ConflictException('Já existe um usuário com a matrícula');
-      }
-
-      const profileExists = await this.profilesRepository.getProfileById(
-        user.profile_id,
-      );
-      if (!profileExists) {
-        throw new NotFoundException('Perfil não encontrado!');
-      }
-
-      const hashPassword = await this.bcrytService.hashPassword(
-        user.registration,
-      );
-
-      return await this.usersRepository.createUser(user, hashPassword);
-    } catch (error) {
-      errorHandler(error, 'Erro ao registrar usuário');
     }
   }
 

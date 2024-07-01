@@ -9,15 +9,16 @@ import {
   Put,
   UseGuards,
 } from '@nestjs/common';
+import { AdminGuard } from 'src/auth/admin.guard';
+import { AuthGuard } from 'src/auth/auth.guard';
 import {
   CreateFunctionDTO,
   CreateProfileFunctionDTO,
 } from './dto/create-function.dto';
 import { FunctionsService } from './functions.service';
-import { AuthGuard } from 'src/auth/auth.guard';
 
 @Controller('functions')
-@UseGuards(AuthGuard)
+@UseGuards(AuthGuard, AdminGuard)
 export class FunctionsController {
   constructor(private readonly functionService: FunctionsService) {}
   @Post()
